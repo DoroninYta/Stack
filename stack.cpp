@@ -104,19 +104,19 @@ int main()
     StackCtor(&stk1, 5);
 
     StackPush(&stk1, 1);
-    StackPush(&stk1, 2);
-    StackPush(&stk1, 3);
+    //StackPush(&stk1, 2);
+    //StackPush(&stk1, 3);
 
-    StackPush(&stk1, 3);
-    StackPush(&stk1, 4);
-    StackPush(&stk1, 5);
-    StackPush(&stk1, 6);
+//    StackPush(&stk1, 3);
+//    StackPush(&stk1, 4);
+//    StackPush(&stk1, 5);
+//    StackPush(&stk1, 6);
 
     //StackPop(&stk1);
     //StackPop(&stk1);
     //StackPop(&stk1);
 
-    StackStatus(&stk1);
+//    StackStatus(&stk1);
 
 
 
@@ -156,7 +156,6 @@ int StackCtor_(Stack * stk, int count, const char * stack_name, const char * fun
 
 int StackPush_(Stack * stk, Elem_t value, const int line)
 {
-
     verificator(stk);
 
     stk->st_main.line = line;
@@ -327,12 +326,9 @@ char * find_errors(Stack * stk)
 {
     assert(stk);
     int error_place = 0;
-    char array_with_errors[7] = {0};
+    char array_with_errors[6] = {0};
 
-    if (stk == NULL)
-        array_with_errors[error_place] = '1';      //error_place++?
-    error_place++;
-
+    //printf("%d, %d\n\n", stk->capacity, stk->size);
     if (stk->data == NULL)
         array_with_errors[error_place] = '1';
     error_place++;
@@ -367,43 +363,38 @@ int errors_reader(Stack * stk, char * string)
 
     int count_of_mistakes = 0;
 
-    if (string[0] == 1)
-    {
-        printf("pointer on %s = NULL\n", stk->st_main.stack_name);
-        count_of_mistakes++;
-    }
 
-    if (string[1] == 1)
+    if (string[0] == '1')
     {
         printf("pointer on %s->data = NULL\n", stk->st_main.stack_name);
         count_of_mistakes++;
     }
 
-    if (string[2] == 1)
+    if (string[1] == '1')
     {
         printf("In Stack %s size > capacity\n", stk->st_main.stack_name);
         count_of_mistakes++;
     }
 
-    if (string[3] == 1)
+    if (string[2] == '1')
     {
         printf("In Stack %s size < 0\n", stk->st_main.stack_name);
         count_of_mistakes++;
     }
 
-    if (string[4] == 1)
+    if (string[3] == '1')
     {
         printf("canary in struct Stack %s data was changed", stk->st_main.stack_name);
         count_of_mistakes++;
     }
 
-    if (string[5] == 1)
+    if (string[4] == '1')
     {
         printf("canary in struct Stack %s was changed", stk->st_main.stack_name);
         count_of_mistakes++;
     }
 
-    if (string[6] == 1)
+    if (string[5] == '1')
     {
         printf("hash data was changed");
         count_of_mistakes++;
@@ -412,9 +403,8 @@ int errors_reader(Stack * stk, char * string)
     if (count_of_mistakes > 0)
     {
         printf("count of mistakes = %d\n", count_of_mistakes);
-        StackStatus(stk);
-        abort();
         return 1;
+
     }
 
     return 0;
@@ -424,10 +414,21 @@ int errors_reader(Stack * stk, char * string)
 
 int verificator_(Stack * stk, const char * file_name,const char * fun_name, const int line)
 {
+    if (stk == NULL)
+    {
+        printf("%s pointer = 0", __FUNCTION__);
+        abort();
+        return 1;
+    }
+
     fun_info(stk, file_name, fun_name, line);
 
     if (errors_reader(stk, find_errors(stk)) == 1)
+    {
+        StackStatus(stk);
+        abort();
         return 1;
+    }
 
     return 0;
 }
