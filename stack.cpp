@@ -6,9 +6,11 @@
 
 
 
+
+
 #define StackCtor(stk, size)  StackCtor_(stk, size, &#stk[0] + (#stk[0] == '&'), __FILE__,  __PRETTY_FUNCTION__, __LINE__)
 #define POISON -429
-//#define ASSERTED_OK ==0||printf("asserted of line %d\n", __LINE__);
+#define ASSERTED_OK ==0||printf("\nasserted on line %d\n\n", __LINE__);
 #define CODE 11022003
 #define PHONE "89001409398"
 #define verificator(stk) verificator_(stk, __FILE__, __PRETTY_FUNCTION__, __LINE__)
@@ -16,10 +18,37 @@
 #define StackResize(stk, count_symbols, mode) StackResize_(stk, count_symbols, mode, __LINE__)
 #define StackPop(stk) StackPop_(stk, __LINE__)
 #define StackUse(stk) StacakUse_(stk, __LINE__)
+#define Destructor(stk) Destructor_(stk, __LINE__)
+#define VERIFICATOR(stk) if(verificator(stk) == Verificator_find_error)\
+                            return Verificator_find_error;
+
+
+#define POINTER_CHECKING(stk) if (stk == NULL)\
+    {                                          \
+        printf("%s pointer = 0", __FUNCTION__);\
+        abort();\
+        return NULL_Ptr_struct_Stack;\
+    }
+
+ //Вопрос ДЕД надо ли так делать????????
+
+#define DEBUG
+#define HASH
+#define CANARY
 
 
 
 
+
+enum errors {
+    Normal_exit = 0,
+    Verificator_find_error = 1,
+    Unnormal_exit_StackUse = 1,
+    NULL_Ptr_struct_Stack = 1,
+    Error_memory_realloc = 1,
+    ERROR_NULL_pointer_on_memory = 1,
+    ERROR_memory_calloc = 1
+};
 
 
 typedef int Elem_t;
@@ -42,7 +71,8 @@ struct protector
 
 
 struct Stack
-{   const char protect_Stack_begin[12] = PHONE;
+{
+    char protect_Stack_begin[12] = PHONE;
     Elem_t * data = 0;
     int size = 0;
     int capacity = 0;
@@ -50,16 +80,11 @@ struct Stack
     struct Stack_info st_main;
     struct Stack_info st_fun;
     unsigned long long int hash = 0;
-    const char protect_Stack_end[12] = PHONE;
+    char protect_Stack_end[12] = PHONE;
 };
 
 
-struct attacker
-{
-    int LM[1] = {0};
-    struct Stack stk;
-    int RM[1] = {0};
-}xxx;
+
 
 int StackCtor_(Stack * stk, int count, const char * stack_name, const char * func_name, const char * file_name, int line);
 int StackPush_(Stack * stk, Elem_t value, const int line);
@@ -71,56 +96,44 @@ char * find_errors(Stack * stk);
 int errors_reader(Stack * stk, char * string);
 int verificator_(Stack * stk, const char * file_name,const char * fun_name, const int line);
 int file_write_realloc( const int count_memory);
-void master(attacker * xxx);
 int poison_input(Stack * stk);
 int Stack_calloc_canary(Stack * stk);
-void memory_distribution(Stack * stk);
+int memory_distribution(Stack * stk);
 int Stack_realloc_canary(Stack * stk);
 unsigned long long int  hash(const Stack * stk);
 int fun_info(Stack * stk, const char * file_name,const char * fun_name, const int line);
+int Destructor_(Stack * stk, const int line);
+void print_complier_param(void);
 
 
-
-//what am i need to do
- /*добавить с помощью дефайнов инициализацию stk.st_fun при вызове функций, использующих verificator и добавить канарейки и
-   хэш, исправить иниц
-   st_main , исправить StackStatus, использовать хуеву тучу дефайнов
-   Destructor, условная компиляция проект готов.
-
-*/
 
 int main()
 {
 
+    print_complier_param();
+
     Stack stk1 = {};
 
-    int i =0;
-    while(i < stk1.capacity)
-    {
-        printf("1 %d\n", stk1.data[i]);
-        i++;
-    }
+    StackCtor(&stk1, 5) ASSERTED_OK
+    assert(stk1.safe.memory);
 
-    StackCtor(&stk1, 5);
+    StackPush(&stk1, 1) ASSERTED_OK
+    StackPush(&stk1, 2) ASSERTED_OK
+    StackPush(&stk1, 3) ASSERTED_OK
 
-    StackPush(&stk1, 1);
-    //StackPush(&stk1, 2);
-    //StackPush(&stk1, 3);
+//    StackPush(&stk1, 3) ASSERTED_OK
+//    StackPush(&stk1, 4) ASSERTED_OK
+//    StackPush(&stk1, 5) ASSERTED_OK
+//    StackPush(&stk1, 6) ASSERTED_OK
 
-//    StackPush(&stk1, 3);
-//    StackPush(&stk1, 4);
-//    StackPush(&stk1, 5);
-//    StackPush(&stk1, 6);
+    StackPop(&stk1);
+    //StackPop(&stk1) ASSERTED_OK
+    //StackPop(&stk1) ASSERTED_OK
 
-    //StackPop(&stk1);
-    //StackPop(&stk1);
-    //StackPop(&stk1);
+    StackStatus(&stk1) ASSERTED_OK
+    Destructor(&stk1) ASSERTED_OK
 
-//    StackStatus(&stk1);
-
-
-
-
+    //StackStatus(&stk1) ASSERTED_OK
 
     return 0;
 }
@@ -132,11 +145,16 @@ int StackCtor_(Stack * stk, int count, const char * stack_name, const char * fun
         return 1;
 
     stk->capacity = count;
-    Stack_calloc_canary(stk);
+    Stack_calloc_canary(stk) ASSERTED_OK
 
     if (stk->data == NULL)
-        return 1;
-    assert(stk->data);
+    {
+        #ifdef REALISE
+        return ERROR_NULL_pointer_on_memory;
+        #else
+        abort();
+        #endif
+    }
 
     stk->st_main.function_name = func_name;
     stk->st_main.file_name = file_name;
@@ -145,18 +163,20 @@ int StackCtor_(Stack * stk, int count, const char * stack_name, const char * fun
 
     stk->size = 0;
 
-    poison_input(stk);
+    poison_input(stk) ASSERTED_OK
 
     stk->hash = hash(stk);
 
-    verificator(stk);
-    return 0;
+    VERIFICATOR(stk)
+
+    return Normal_exit;
 }
 
 
 int StackPush_(Stack * stk, Elem_t value, const int line)
 {
-    verificator(stk);
+
+    VERIFICATOR(stk)
 
     stk->st_main.line = line;
 
@@ -172,40 +192,40 @@ int StackPush_(Stack * stk, Elem_t value, const int line)
         else
             stk->capacity = stk->capacity * 2;
 
-        StackResize(stk, stk->capacity, 0);
+        StackResize(stk, stk->capacity, 0) ASSERTED_OK
     }
 
     stk->data[stk->size] = value;
+    stk->hash = hash(stk);
 
-    if (verificator(stk) == 1)
-        return 1;
+    VERIFICATOR(stk)
 
-    return 0;
+    return Normal_exit;
 }
 
 
 int StackResize_(Stack * stk, int count_symbols, const int mode, const int line)
 {
-    verificator(stk);
+    VERIFICATOR(stk)
 
     stk->st_main.line = line;
 
-    Stack_realloc_canary(stk);
+    Stack_realloc_canary(stk) ASSERTED_OK
 
     file_write_realloc(count_symbols);
 
     if (mode == 0)
-        poison_input(stk);
+        poison_input(stk) ASSERTED_OK
 
-    verificator(stk);
+    VERIFICATOR(stk)
 
-    return 0;
+    return Normal_exit;
 }
 
 
 Elem_t StackPop_(Stack * stk, const int line)
 {
-    verificator(stk);
+    VERIFICATOR(stk)
 
     stk->st_main.line = line;
 
@@ -225,11 +245,12 @@ Elem_t StackPop_(Stack * stk, const int line)
         else
             stk->capacity = (stk->capacity)/2;
 
-        StackResize(stk, stk->capacity, 1);
+        StackResize(stk, stk->capacity, 1) ASSERTED_OK
     }
 
-    if (verificator(stk) == 1)
-        return 1;
+    stk->hash = hash(stk);
+
+    VERIFICATOR(stk)
 
     return value;
 }
@@ -237,7 +258,7 @@ Elem_t StackPop_(Stack * stk, const int line)
 
 int StackUse_(Stack * stk, const int line)
 {
-    verificator(stk);
+    VERIFICATOR(stk)
 
     stk->st_main.line = line;
 
@@ -246,13 +267,15 @@ int StackUse_(Stack * stk, const int line)
 
     while (1)
     {
+        VERIFICATOR(stk)
+
         scanf("%s %d", string, &value);
 
         printf("you input: %s\n", string);
         if (strcmp(string, "end") == 0)
          {
             printf("using end");
-            return 0;                               //how to make another stop?
+            return Normal_exit;                               //how to make another stop?
         }
 
         else if (strcmp(string, "push") == 0)
@@ -281,9 +304,10 @@ int StackUse_(Stack * stk, const int line)
             printf("stack status: %d\n", stk->data[i]);
             i--;
         }
+        stk->hash = hash(stk);
     }
 
-    return 1;
+    return Unnormal_exit_StackUse;
 }
 
 
@@ -318,40 +342,56 @@ int StackStatus(Stack * stk)
 
     printf("\nHASH %x\n", stk->hash);
 
-    return 0;
+    return Normal_exit;
+}
+
+int Destructor_(Stack * stk, const int line)
+{
+    VERIFICATOR(stk)
+
+    stk->st_main.line = line;
+
+    stk->safe.memory[0] = POISON;
+    stk->safe.memory[stk->capacity + 1] = POISON;
+
+    stk->protect_Stack_begin[0] = '0';
+    stk->protect_Stack_end[0] = '0';
+
+    stk->size = -1;
+    stk->capacity = -2;
+
+    stk->hash = 0xDEADF00D;
+
+    free(stk->safe.memory);
+
+    return Normal_exit;
+
 }
 
 
 char * find_errors(Stack * stk)
 {
     assert(stk);
-    int error_place = 0;
+
     char array_with_errors[6] = {0};
 
-    //printf("%d, %d\n\n", stk->capacity, stk->size);
     if (stk->data == NULL)
-        array_with_errors[error_place] = '1';
-    error_place++;
+        array_with_errors[0] = '1';
 
     if (stk->size > stk-> capacity)
-        array_with_errors[error_place] = '1';
-    error_place++;
+        array_with_errors[1] = '1';
 
     if (stk->size < 0)
-        array_with_errors[error_place] = '1';
-    error_place++;
+        array_with_errors[2] = '1';
 
     if (stk->safe.memory[0] != CODE || stk->safe.memory[stk->capacity + 1] != CODE)
-        array_with_errors[error_place] = '1';
-    error_place++;
+        array_with_errors[3] = '1';
 
     if (strcmp(stk->protect_Stack_begin, PHONE) != 0 || strcmp(stk->protect_Stack_end, PHONE) != 0)
-        array_with_errors[error_place] = '1';
-    error_place++;
+        array_with_errors[4] = '1';
 
     if (hash(stk) != stk->hash)
-        array_with_errors[error_place] = '1';
-    error_place++;
+        array_with_errors[5] = '1';
 
     return array_with_errors;
 }
@@ -384,19 +424,19 @@ int errors_reader(Stack * stk, char * string)
 
     if (string[3] == '1')
     {
-        printf("canary in struct Stack %s data was changed", stk->st_main.stack_name);
+        printf("canary in struct Stack %s data was changed\n", stk->st_main.stack_name);
         count_of_mistakes++;
     }
 
     if (string[4] == '1')
     {
-        printf("canary in struct Stack %s was changed", stk->st_main.stack_name);
+        printf("canary in struct Stack %s was changed\n", stk->st_main.stack_name);
         count_of_mistakes++;
     }
 
     if (string[5] == '1')
     {
-        printf("hash data was changed");
+        printf("hash data was changed\n");
         count_of_mistakes++;
     }
 
@@ -407,30 +447,28 @@ int errors_reader(Stack * stk, char * string)
 
     }
 
-    return 0;
+    return Normal_exit;
 
 }
 
 
 int verificator_(Stack * stk, const char * file_name,const char * fun_name, const int line)
 {
-    if (stk == NULL)
-    {
-        printf("%s pointer = 0", __FUNCTION__);
-        abort();
-        return 1;
-    }
+    POINTER_CHECKING(stk)
 
-    fun_info(stk, file_name, fun_name, line);
+    fun_info(stk, file_name, fun_name, line) ASSERTED_OK
 
-    if (errors_reader(stk, find_errors(stk)) == 1)
+    if (errors_reader(stk, find_errors(stk)) == Verificator_find_error)
     {
         StackStatus(stk);
+        #ifdef REALISE
+        return Verificator_find_error;
+        #else
         abort();
-        return 1;
+        #endif
     }
 
-    return 0;
+    return Normal_exit;
 }
 
 
@@ -438,19 +476,13 @@ int file_write_realloc( const int count_elements)
 {
     FILE * stream = fopen("realloc_work.txt", "w");
     fprintf(stream, "realloc was used. Memory changed to %d\n", count_elements);
-    return 0;
-}
-
-
-void master(attacker * xxx)
-{
-    xxx->LM[1] = 0;
-    xxx->RM[-1] = 0;
+    return Normal_exit;
 }
 
 
 int poison_input(Stack * stk)
 {
+    VERIFICATOR(stk);
     int i = stk->size + 1;
 
     while (i < stk->capacity)
@@ -459,7 +491,7 @@ int poison_input(Stack * stk)
         i++;
     }
 
-    return 0;
+    return Normal_exit;
 }
 
 
@@ -481,41 +513,66 @@ int poison_input(Stack * stk)
 int Stack_calloc_canary(Stack * stk)
 {
     stk->safe.memory = (Elem_t *) calloc (stk->capacity + 2, sizeof(stk->safe.memory[0]));
-    assert(stk->safe.memory);
 
-    memory_distribution(stk);
+    if (stk->safe.memory == NULL)
+    {
+        #ifdef REALISE
+        return ERROR_memory_calloc;
 
-    return 0;
+        #else
+        abort();
+
+        #endif
+    }
+
+    memory_distribution(stk) ASSERTED_OK
+
+    return Normal_exit;
 }
 
 
-void memory_distribution(Stack * stk)
+int memory_distribution(Stack * stk)
 {
+    POINTER_CHECKING(stk)
+
     stk->safe.memory[0] = stk->safe.left_side;
     stk->data = stk->safe.memory + 1;
     stk->safe.memory[stk->capacity + 1] = stk->safe.right_side;
+
+    return Normal_exit;
 }
 
 
 int Stack_realloc_canary(Stack * stk)
 {
+    POINTER_CHECKING(stk)
+
     Elem_t * realloc_checker = (Elem_t *) realloc (stk->safe.memory, sizeof(Elem_t) * (stk->capacity + 2));
 
-
     if (realloc_checker == NULL)
-        return 1;
-    assert(realloc_checker);
+    {
+        #ifdef REALISE
+        return Error_memory_realloc;
+        #else
+        abort();
+
+        #endif
+    }
 
     stk->safe.memory = realloc_checker;
 
-    memory_distribution(stk);
+    memory_distribution(stk) ASSERTED_OK
 
-    return 0;
+    return Normal_exit;
 }
 
 
 unsigned long long int  hash(const Stack * stk)
 {
+    POINTER_CHECKING(stk)
+
+    if (stk == NULL)
+        return NULL_Ptr_struct_Stack;
 
     unsigned long long int h = 0;
     Elem_t  c = *stk->data;
@@ -540,12 +597,36 @@ unsigned long long int  hash(const Stack * stk)
 
 int fun_info(Stack * stk, const char * file_name,const char * fun_name, const int line)
 {
+    POINTER_CHECKING(stk)
+
     stk->st_fun.stack_name = stk->st_main.stack_name;
     stk->st_fun.file_name = file_name;
     stk->st_fun.function_name = fun_name;
     stk->st_fun.line = line;
 
-    return 0;
+    return Normal_exit;
 }
+
+
+void print_complier_param(void)
+{
+    #if defined DEBUG
+    printf("COMPLIER MODE DEBUG\n");
+    #endif
+
+    #if defined HASH
+    printf("COMPLIER WITH CHACKING HASH\n");
+    #endif
+
+    #if defined CANARY
+    printf("COMPLIER WITH CHACKING CANARY\n");
+    #endif
+
+    #if defined REALISE
+    printf("COMPLIER MODE REALISE\n");
+    #endif
+
+}
+
 
 
